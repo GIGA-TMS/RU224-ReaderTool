@@ -11,17 +11,19 @@ public class TagUnit {
 	private int antennaId;
 	private String tid;
 	private String userBank;
-	
+
+	private int rssi;
+
 	public TagUnit(String epc) {
 		this.epc = epc;
 		readCount = 0;
 	}
-	
+
 	public TagUnit(String epc, int count){
 		this.epc = epc;
 		readCount = count;
 	}
-	
+
 	public TagUnit(String epc, int count, int frequency) {
 		this.epc = epc;
 		readCount = count;
@@ -33,63 +35,71 @@ public class TagUnit {
 	public void setEPC(String epc){
 		this.epc = epc;
 	}
-	
+
 	public String getEPC(){
 		return this.epc;
 	}
-	
+
 	public void setTid(String tid) {
 		this.tid = tid;
 	}
-	
+
 	public String getTid() {
 		return this.tid;
 	}
-	
+
 	public void setUserBank(String userBank) {
 		this.userBank = userBank;
 	}
-	
+
 	public String getUserBank() {
 		return this.userBank;
 	}
-	
+
 	public void addReadCount(int count){
 		readCount += count;
 	}
-	
+
 	public void setReadCount(int count) {
 		readCount = count;
 	}
-	
+
 	public int getReadCount(){
 		return readCount;
 	}
-	
+
 	public void setTime(Date time) {
 		this.time = time;
 	}
-	
+
 	public Date getTime() {
 		return time;
 	}
-	
+
 	public void setReadFrequency(int frequency) {
 		readFrequency = frequency;
 	}
-	
+
 	public int getReadFrequency() {
 		return readFrequency;
 	}
-	
+
 	public void setAntennaId(int antenna) {
 		antennaId = antenna;
 	}
-	
+
 	public int getAntennaId() {
 		return antennaId;
 	}
-	
+
+	public int getRssi() {
+		return rssi;
+	}
+
+	public void setRssi(int rssi) {
+		this.rssi = rssi;
+	}
+
 	public void reset(){
 		epc = null;
 		readCount = 0;

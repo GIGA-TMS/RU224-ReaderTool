@@ -85,6 +85,6 @@ public class SaveDataFrame extends AnchorPane implements EventHandler<ActionEven
 		} else if (event.getSource() == btn_apply) {
 			db_setting.saveDBSetting();
 		}
-		
+
 	}
 }
