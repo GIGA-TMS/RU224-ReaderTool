@@ -137,7 +137,6 @@ public class DataFrame extends AnchorPane implements DataUpdateListener, EventHa
                 ttd.setEpc(tu.getEPC());
 //				ttd.setAscii(StringTool.hexToAsciiString(tu.getEPC()));
                 ttd.setReadCount(tu.getReadCount());
-                System.out.println("Data frame RSSI" + tu.getRssi());
                 ttd.setRssi(tu.getRssi());
                 ttd.setTime(formatter.format(tu.getTime()));
                 ttd.setReadFrequency(tu.getReadFrequency());
