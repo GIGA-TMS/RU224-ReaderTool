@@ -36,7 +36,7 @@ public class DigitalIOController implements GpioPinListenerDigital {
 
     // This variable is used to avoid invoking platform native method while testing the ReaderTool software on
     // the reader without RPi board.
-    public static boolean DISABLE_CONTROLLER = true;
+    public static boolean DISABLE_CONTROLLER = false;
 
     private DigitalIOController() {
         if (DISABLE_CONTROLLER) {
