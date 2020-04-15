@@ -13,6 +13,8 @@ import scannel.reader.ReaderConfig.DBType;
 
 public class DatabaseUtility {
 
+    public static final String MSSQL_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+    public static final String MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver";
     private static DatabaseUtility db_utility;
     private DBType myType;
     private Connection myConn;
@@ -40,7 +42,6 @@ public class DatabaseUtility {
         if (db_utility == null) {
             db_utility = new DatabaseUtility();
         }
-
         return db_utility;
     }
 
@@ -76,216 +77,122 @@ public class DatabaseUtility {
     }
 
     public void insertTagData() {
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
+        new Thread(() -> {
+            try {
+                MyLogger.printLog("Start inserting tag data into SQL database...");
+                myConn = null;
+                myStmt = null;
                 if (myType == DBType.MYSQL) {
-                    inserMySQL();
+                    Class.forName(MYSQL_DRIVER);
+                    myConn = connectMySQL();
                 } else if (myType == DBType.MS_SQL_SERVER) {
-                    insertSQLServer();
+                    Class.forName(MSSQL_DRIVER);
+                    myConn = connectMSSQL();
                 }
+                myStmt = getSqlPreparedStatement();
+                saveTagListToDataBase();
+                myStmt.close();
+                myConn.close();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                MyLogger.printErrorLog(e);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                MyLogger.printErrorLog(e);
+                showErrorAlert(e);
+            } finally {
+                closeDataBaseConnection();
+                MyLogger.printLog("Complete inserting tag data...");
             }
-
         }).start();
-
     }
 
-    private void insertSQLServer() {
-        MyLogger.printLog("Start inserting tag data into SQL-Server database...");
-
-        myConn = null;
-        myStmt = null;
-
-        try {
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-
-            String url = "jdbc:sqlserver://" + db_url + ";databaseName=" + db_name + ";user=" + db_user + ";password=" + db_password;
-
-            myConn = DriverManager.getConnection(url);
-
-            String fields = field_epc + ", " + field_readerid + ", " + field_time;
-            String values = "?, ?, ?";
-            if (field_tid.length() != 0) {
-                fields = fields + ", " + field_tid;
-                values = values + ", ?";
-            }
-
-            if (field_userBank.length() != 0) {
-                fields = fields + ", " + field_userBank;
-                values = values + ", ?";
-            }
-
-            if (field_rssi.length() != 0) {
-                fields = fields + ", " + field_rssi;
-                values = values + ", ?";
-            }
-
-            String query = "INSERT INTO " + db_table + " (" + fields + ") "
-                    + "VALUES (" + values + ")";
-
-
-            myStmt = myConn.prepareStatement(query);
-
-            TagList tagList = ReaderUtility.getInstance().getTagData();
-            TagUnit tu;
-
-            for (int i = 0; i < tagList.size(); i++) {
-                tu = tagList.get(i);
-                int index = 0;
-                myStmt.setString(++index, tu.getEPC());
-                myStmt.setString(++index, readerId);
-                myStmt.setTimestamp(++index, new Timestamp(tu.getTime().getTime()));
-                if (field_tid.length() != 0) {
-                    myStmt.setString(++index, tu.getTid());
-                }
-                if (field_userBank.length() != 0) {
-                    myStmt.setString(++index, tu.getUserBank());
-                }
-                if (field_rssi.length() != 0) {
-                    myStmt.setString(++index, tu.getRssi() + "");
-                }
-                myStmt.addBatch();
-            }
-
-            myStmt.executeBatch();
-
-            myStmt.close();
-            myConn.close();
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            MyLogger.printErrorLog(e);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            MyLogger.printErrorLog(e);
-
-            Platform.runLater(() -> {
-                Alert alert = new Alert(AlertType.ERROR);
-                alert.setTitle("Error");
-                alert.setHeaderText(null);
-                alert.setResizable(true);
-                alert.setContentText(e.getMessage());
-                alert.showAndWait();
-            });
-
-        } finally {
-            if (myStmt != null) {
-                try {
-                    myStmt.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (myConn != null) {
-                try {
-                    myConn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            MyLogger.printLog("Complete inserting tag data...");
-        }
-
+    private Connection connectMSSQL() throws SQLException {
+        String url = "jdbc:sqlserver://" + db_url + ";databaseName=" + db_name
+                + ";user=" + db_user + ";password=" + db_password;
+        return DriverManager.getConnection(url);
     }
 
-    private void inserMySQL() {
-        myConn = null;
-        myStmt = null;
+    private Connection connectMySQL() throws SQLException {
+        String url = "jdbc:mysql://" + db_url + "/" + db_name + "?serverTimezone=UTC";
+        return DriverManager.getConnection(url, db_user, db_password);
+    }
 
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            String url = "jdbc:mysql://" + db_url + "/" + db_name + "?serverTimezone=UTC";
-            myConn = DriverManager.getConnection(url, db_user, db_password);
-
-            String fields = field_epc + ", " + field_readerid + ", " + field_time;
-            String values = "?, ?, ?";
-            if (field_tid.length() != 0) {
-                fields = fields + ", " + field_tid;
-                values = values + ", ?";
-            }
-
-            if (field_userBank.length() != 0) {
-                fields = fields + ", " + field_userBank;
-                values = values + ", ?";
-            }
-
-            if (field_rssi.length() != 0) {
-                fields = fields + ", " + field_rssi;
-                values = values + ", ?";
-            }
-
-            String query = "INSERT INTO " + db_table + " (" + fields + ") "
-                    + "VALUES (" + values + ")";
-
-
-            myStmt = myConn.prepareStatement(query);
-
-            TagList tagList = ReaderUtility.getInstance().getTagData();
-            TagUnit tu;
-
-            for (int i = 0; i < tagList.size(); i++) {
-                tu = tagList.get(i);
-                int index = 0;
-                myStmt.setString(++index, tu.getEPC());
-                myStmt.setString(++index, readerId);
-                myStmt.setTimestamp(++index, new Timestamp(tu.getTime().getTime()));
-                if (field_tid.length() != 0) {
-                    myStmt.setString(++index, tu.getTid());
-                }
-                if (field_userBank.length() != 0) {
-                    myStmt.setString(++index, tu.getUserBank());
-                }
-                if (field_rssi.length() != 0) {
-                    myStmt.setString(++index, tu.getRssi() + "");
-                }
-                myStmt.addBatch();
-            }
-
-
-            myStmt.executeBatch();
-
-            myStmt.close();
-            myConn.close();
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            MyLogger.printErrorLog(e);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            MyLogger.printErrorLog(e);
-
-            Platform.runLater(() -> {
-                Alert alert = new Alert(AlertType.ERROR);
-                alert.setTitle("Error");
-                alert.setHeaderText(null);
-                alert.setResizable(true);
-                alert.setContentText(e.getMessage());
-                alert.showAndWait();
-
-            });
-
-        } finally {
-            if (myStmt != null) {
-                try {
-                    myStmt.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (myConn != null) {
-                try {
-                    myConn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+    private void closeDataBaseConnection() {
+        if (myStmt != null) {
+            try {
+                myStmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
 
+        if (myConn != null) {
+            try {
+                myConn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void saveTagListToDataBase() throws SQLException {
+        TagList tagList = ReaderUtility.getInstance().getTagData();
+        TagUnit tu;
+
+        for (int i = 0; i < tagList.size(); i++) {
+            tu = tagList.get(i);
+            int index = 0;
+            myStmt.setString(++index, tu.getEPC());
+            myStmt.setString(++index, readerId);
+            myStmt.setTimestamp(++index, new Timestamp(tu.getTime().getTime()));
+            if (field_tid.length() != 0) {
+                myStmt.setString(++index, tu.getTid());
+            }
+            if (field_userBank.length() != 0) {
+                myStmt.setString(++index, tu.getUserBank());
+            }
+            if (field_rssi.length() != 0) {
+                myStmt.setString(++index, tu.getRssi() + "");
+            }
+            myStmt.addBatch();
+        }
+
+        myStmt.executeBatch();
+    }
+
+    private void showErrorAlert(Exception e) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText(null);
+            alert.setResizable(true);
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        });
+    }
+
+    private PreparedStatement getSqlPreparedStatement() throws SQLException {
+        String fields = field_epc + ", " + field_readerid + ", " + field_time;
+        String values = "?, ?, ?";
+        if (field_tid.length() != 0) {
+            fields = fields + ", " + field_tid;
+            values = values + ", ?";
+        }
+
+        if (field_userBank.length() != 0) {
+            fields = fields + ", " + field_userBank;
+            values = values + ", ?";
+        }
+
+        if (field_rssi.length() != 0) {
+            fields = fields + ", " + field_rssi;
+            values = values + ", ?";
+        }
+
+        String query = "INSERT INTO " + db_table + " (" + fields + ") "
+                + "VALUES (" + values + ")";
+        return myConn.prepareStatement(query);
     }
 
 }
